@@ -168,15 +168,28 @@ ${studyContext.recentSessions.map((session: any, index: number) =>
       `${index + 1}. "${session.title}" - ${session.duration} min total (${session.focusedDuration} min focused${session.pausedDuration > 0 ? `, ${session.pausedDuration} min paused` : ''})${session.rating ? ` (${session.rating}/5 stars)` : ''}`
     ).join('\n')}
 
+Study Habit Benchmarks for Context:
+- Excellent consistency: 1+ study session per day (7+ sessions/week)
+- Good consistency: 4-6 study sessions per week
+- Developing consistency: 2-3 study sessions per week
+- Optimal session length: 25-50 minutes (Pomodoro technique range)
+- Good focus efficiency: 85%+ focused time (15% or less paused)
+- Excellent focus efficiency: 95%+ focused time (5% or less paused)
+- Healthy study schedule: Studying 5-6 days per week with 1-2 rest days
+- Effective daily study time: 1-3 hours for most students
+- Session rating trends: Consistent 4-5 star ratings indicate good study quality
+
 Guidelines for responses:
 - Be encouraging and supportive
 - Provide specific, actionable study advice
 - Reference their actual study data when relevant
+- Use the benchmarks above to provide context (e.g., "Your 1 session per day shows excellent consistency!")
 - Keep responses concise but helpful
 - Focus on study techniques, time management, and motivation
+- Celebrate achievements and progress, even small ones
 - If they ask about topics unrelated to studying, gently redirect to study-related topics
 
-Remember: You're here to help them improve their study habits and academic performance based on their actual study patterns.`;
+Remember: You're here to help them improve their study habits and academic performance based on their actual study patterns. Use the benchmarks to provide encouraging, realistic feedback.`;
   }
 
   private buildConversation(systemPrompt: string, chatRequest: ChatRequest) {
