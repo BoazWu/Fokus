@@ -105,18 +105,7 @@ The frontend will be available at `http://localhost:5173` and the backend at `ht
 - **Paused Time**: Total break time during the session
 - **Focus Efficiency**: Percentage of time spent actively studying
 
-## Contributing
 
-This project uses modern development practices:
-- TypeScript for type safety
-- ESLint and Prettier for code quality
-- Modular architecture for maintainability
-- Comprehensive error handling
-- Real-time state management
-
-## License
-
-This project is licensed under the MIT License.
 
 ## Features
 
