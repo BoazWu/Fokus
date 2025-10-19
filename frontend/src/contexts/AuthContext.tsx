@@ -26,6 +26,7 @@ interface AuthContextType {
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,7 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setUser(userData.user); // Fix: extract user from response
       } else {
         setUser(null);
       }
@@ -82,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const userData = await response.json();
-    setUser(userData);
+    setUser(userData.user); // Fix: extract user from response
   };
 
   const register = async (credentials: RegisterCredentials) => {
@@ -101,7 +102,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const userData = await response.json();
-    setUser(userData);
+    setUser(userData.user); // Fix: extract user from response
+  };
+
+  const refreshSession = async () => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData.user);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Session refresh failed:', error);
+      setUser(null);
+    }
   };
 
   const logout = async () => {
@@ -119,7 +139,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+
+    // Auto-refresh session every 30 minutes if user is active
+    const refreshInterval = setInterval(() => {
+      if (user) {
+        refreshSession();
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [user]);
 
   const value: AuthContextType = {
     user,
@@ -128,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     checkAuth,
+    refreshSession,
   };
 
   return (

@@ -25,6 +25,21 @@ export interface EndSessionRequest {
 class SessionService {
   private baseUrl = '/api/sessions';
 
+  private async handleResponse(response: Response) {
+    if (response.status === 401) {
+      // Session expired - redirect to login
+      window.location.href = '/login';
+      throw new Error('Session expired. Please log in again.');
+    }
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Request failed');
+    }
+    
+    return response.json();
+  }
+
   async startSession(): Promise<CreateSessionResponse> {
     const response = await fetch(`${this.baseUrl}/start`, {
       method: 'POST',
@@ -34,12 +49,7 @@ class SessionService {
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to start session');
-    }
-
-    return response.json();
+    return this.handleResponse(response);
   }
 
   async updateSession(sessionId: string, updates: UpdateSessionRequest): Promise<StudySession> {
@@ -52,12 +62,7 @@ class SessionService {
       body: JSON.stringify(updates),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to update session');
-    }
-
-    return response.json();
+    return this.handleResponse(response);
   }
 
   async endSession(sessionId: string, data: EndSessionRequest): Promise<StudySession> {
@@ -70,12 +75,7 @@ class SessionService {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to end session');
-    }
-
-    return response.json();
+    return this.handleResponse(response);
   }
 
   async getUserSessions(page: number = 1, limit: number = 10): Promise<{
@@ -87,12 +87,7 @@ class SessionService {
       credentials: 'include',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to fetch sessions');
-    }
-
-    return response.json();
+    return this.handleResponse(response);
   }
 
   async getSession(sessionId: string): Promise<StudySession> {
@@ -100,12 +95,7 @@ class SessionService {
       credentials: 'include',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to fetch session');
-    }
-
-    return response.json();
+    return this.handleResponse(response);
   }
 }
 

@@ -52,6 +52,27 @@ export class AuthController {
     return { user };
   }
 
+  @Post('refresh')
+  @Protected()
+  @HttpCode(HttpStatus.OK)
+  async refreshSession(
+    @CurrentUserId() userId: string,
+    @Session() session: Record<string, any>,
+  ) {
+    // Refresh the session by updating it
+    session.userId = userId;
+    
+    const user = await this.authService.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      message: 'Session refreshed',
+      user,
+    };
+  }
+
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
