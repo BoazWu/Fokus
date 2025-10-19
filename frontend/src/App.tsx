@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TimerPage } from './pages/TimerPage';
+import { ChatPage } from './pages/ChatPage';
 
 // Root component that provides AuthContext
 function Root() {
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
           {
             path: "timer",
             element: <TimerPage />
+          },
+          {
+            path: "chat",
+            element: <ChatPage />
           }
         ]
       },

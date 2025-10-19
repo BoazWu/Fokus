@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppShell, Group, Text, Button, ActionIcon, Burger } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconLogout, IconDashboard, IconClock } from '@tabler/icons-react';
+import { IconPlayerPlay, IconLogout, IconDashboard, IconClock, IconMessageCircle } from '@tabler/icons-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -134,6 +134,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           onClick={handleStartTimer}
         >
           Study Timer
+        </Button>
+        
+        <Button
+          variant={location.pathname === '/chat' ? 'filled' : 'subtle'}
+          leftSection={<IconMessageCircle size={16} />}
+          justify="flex-start"
+          fullWidth
+          mt="xs"
+          onClick={() => navigate('/chat')}
+        >
+          AI Study Coach
         </Button>
       </AppShell.Navbar>
 
