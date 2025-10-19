@@ -6,6 +6,7 @@ interface SessionFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (title?: string, description?: string, rating?: number) => void;
+  onDiscard: () => void;
   sessionDuration: number;
 }
 
@@ -13,6 +14,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onDiscard,
   sessionDuration,
 }) => {
   const [title, setTitle] = useState('');
@@ -56,8 +58,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     }
   };
 
-  const handleSkip = () => {
-    onSubmit();
+  const handleDiscard = () => {
+    onDiscard();
     setTitle('');
     setDescription('');
     setRating(0);
@@ -110,10 +112,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           <Group justify="space-between" mt="md">
             <Button
               variant="subtle"
-              onClick={handleSkip}
+              color="red"
+              onClick={handleDiscard}
               disabled={isSubmitting}
             >
-              Skip
+              Discard Session
             </Button>
             
             <Button

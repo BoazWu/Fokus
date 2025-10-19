@@ -99,6 +99,30 @@ class SessionService {
     return this.handleResponse(response);
   }
 
+  async clearActiveSession(): Promise<{ cleared: boolean; message: string }> {
+    const response = await fetch(`${this.baseUrl}/clear-active`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async discardSession(sessionId: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/${sessionId}/discard`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return this.handleResponse(response);
+  }
+
   async cleanupActiveSessions(): Promise<{ deletedCount: number }> {
     const response = await fetch(`${this.baseUrl}/cleanup/active-sessions`, {
       method: 'POST',

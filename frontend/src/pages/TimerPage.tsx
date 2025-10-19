@@ -107,6 +107,35 @@ export const TimerPage: React.FC = () => {
     }
   };
 
+  const handleSessionDiscard = async () => {
+    if (!completedSessionId) return;
+
+    try {
+      if (!completedSessionId.startsWith('offline_')) {
+        // Discard the active session from backend
+        await sessionService.discardSession(completedSessionId);
+      }
+      
+      notifications.show({
+        title: 'Session Discarded',
+        message: 'Your study session has been discarded and will not be saved.',
+        color: 'orange',
+      });
+      
+      // Navigate to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to discard session:', error);
+      notifications.show({
+        title: 'Discard Failed',
+        message: 'Failed to discard session. Please try again.',
+        color: 'red',
+      });
+    }
+  };
+
   const handleSessionFormClose = () => {
     setShowSessionForm(false);
     setCompletedSessionId(null);
@@ -125,6 +154,7 @@ export const TimerPage: React.FC = () => {
         isOpen={showSessionForm}
         onClose={handleSessionFormClose}
         onSubmit={handleSessionFormSubmit}
+        onDiscard={handleSessionDiscard}
         sessionDuration={completedSessionDuration}
       />
     </>

@@ -27,7 +27,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showOfflineWarning, setShowOfflineWarning] = useState(false);
   const [showNavigationWarning, setShowNavigationWarning] = useState(false);
-  
+
 
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -43,7 +43,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
@@ -55,9 +55,9 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   // Sync pending updates when back online
   const syncPendingUpdates = async () => {
     if (pendingUpdatesRef.current.length === 0) return;
-    
+
     setNetworkStatus('syncing');
-    
+
     try {
       for (const update of pendingUpdatesRef.current) {
         await sessionService.updateSession(update.sessionId, update.updates);
@@ -84,14 +84,14 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
       return result;
     } catch (error) {
       console.error('API call failed:', error);
-      
+
       // Only show error for critical operations
       if (showOfflineAlert) {
         setError(error instanceof Error ? error.message : 'Network error occurred');
         setNetworkStatus('offline');
         setShowOfflineWarning(true);
       }
-      
+
       if (fallbackData) {
         return fallbackData;
       }
@@ -104,22 +104,22 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    
+
     intervalRef.current = setInterval(() => {
       if (startTimeRef.current && status === 'active') {
         const now = Date.now();
         const newElapsedTime = now - startTimeRef.current - pausedDuration;
         setElapsedTime(newElapsedTime);
-        
+
         // Update session every 30 seconds when active and online (silently)
         if (sessionId && newElapsedTime % 30000 < 1000) {
           if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
-            handleApiCall(() => sessionService.updateSession(sessionId, { 
+            handleApiCall(() => sessionService.updateSession(sessionId, {
               status: 'active',
-              pausedDuration 
+              pausedDuration
             }), null, false); // Don't show offline alerts for periodic updates
           }
-          
+
           if (onSessionUpdate) {
             onSessionUpdate(sessionId, newElapsedTime, 'active');
           }
@@ -141,44 +141,68 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     setIsLoading(true);
     setError(null);
     setShowOfflineWarning(false);
-    
+
     // Always start the timer locally first for immediate feedback
     const now = Date.now();
     startTimeRef.current = now;
     setPausedDuration(0);
     setElapsedTime(0);
     setStatus('active');
-    
-    // Try to create session on backend, but don't block the timer
-    const result = await handleApiCall(() => sessionService.startSession(), null, false);
-    
-    if (result) {
+
+    // Try to create session on backend
+    try {
+      const result = await sessionService.startSession();
+      
       // Backend session created successfully
       setSessionId(result._id);
       if (onSessionStart) {
         onSessionStart(result._id);
       }
-    } else {
-      // Use local session - will be handled when session ends
-      const tempSessionId = `offline_${now}`;
-      setSessionId(tempSessionId);
-      if (onSessionStart) {
-        onSessionStart(tempSessionId);
+    } catch (error) {
+      // Check if the error is about having an active session
+      if (error instanceof Error && error.message.includes('User already has an active session')) {
+        try {
+          // Clear the existing active session and retry
+          await sessionService.clearActiveSession();
+          const result = await sessionService.startSession();
+          
+          // Backend session created successfully after clearing
+          setSessionId(result._id);
+          if (onSessionStart) {
+            onSessionStart(result._id);
+          }
+        } catch (retryError) {
+          console.error('Failed to start session after clearing active session:', retryError);
+          // Fall back to offline session
+          const tempSessionId = `offline_${now}`;
+          setSessionId(tempSessionId);
+          if (onSessionStart) {
+            onSessionStart(tempSessionId);
+          }
+        }
+      } else {
+        console.error('Failed to start session:', error);
+        // Fall back to offline session for other errors
+        const tempSessionId = `offline_${now}`;
+        setSessionId(tempSessionId);
+        if (onSessionStart) {
+          onSessionStart(tempSessionId);
+        }
       }
     }
-    
+
     setIsLoading(false);
   };
 
   // Pause the current session
   const handlePause = async () => {
     if (!sessionId) return;
-    
+
     if (status === 'active') {
       pauseStartRef.current = Date.now();
       setStatus('paused');
       stopInterval();
-      
+
       // Update backend (silently)
       const updates = { status: 'paused' as const, pausedDuration };
       if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
@@ -191,7 +215,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
           timestamp: Date.now()
         });
       }
-      
+
       if (onSessionUpdate) {
         onSessionUpdate(sessionId, elapsedTime, 'paused');
       }
@@ -203,7 +227,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
         pauseStartRef.current = null;
       }
       setStatus('active');
-      
+
       // Update backend (silently)
       const updates = { status: 'active' as const, pausedDuration };
       if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
@@ -216,7 +240,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
           timestamp: Date.now()
         });
       }
-      
+
       if (onSessionUpdate) {
         onSessionUpdate(sessionId, elapsedTime, 'active');
       }
@@ -226,16 +250,16 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   // End the current session
   const handleEnd = async () => {
     if (!sessionId) return;
-    
+
     if (status === 'paused' && pauseStartRef.current) {
       // If ending while paused, add the final pause duration
       const pauseDuration = Date.now() - pauseStartRef.current;
       setPausedDuration(prev => prev + pauseDuration);
     }
-    
+
     setStatus('completed');
     stopInterval();
-    
+
     // Trigger the session end callback - TimerPage will handle showing the form
     if (onSessionEnd) {
       onSessionEnd(sessionId, elapsedTime);
@@ -245,15 +269,15 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   // Handle navigation confirmation
   const handleConfirmNavigation = async () => {
     setShowNavigationWarning(false);
-    
+
     // Directly end the session in the backend when user confirms navigation
     if (sessionId && !sessionId.startsWith('offline_')) {
       try {
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const defaultTitle = `Study session ended at ${timeString}`;
-        
-        await sessionService.endSession(sessionId, { 
+
+        await sessionService.endSession(sessionId, {
           title: defaultTitle,
           description: 'Session ended when navigating to another page'
         });
@@ -261,11 +285,11 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
         console.error('Failed to end session during navigation:', error);
       }
     }
-    
+
     // Update local state
     setStatus('completed');
     stopInterval();
-    
+
     // Then proceed with navigation
     if (pendingNavigationRef.current) {
       pendingNavigationRef.current();
@@ -327,10 +351,10 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
           const now = new Date();
           const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const defaultTitle = `Study session ended at ${timeString}`;
-          
+
           // Call the API directly without waiting for the response
           // Note: The backend will handle calculating the final duration correctly
-          sessionService.endSession(sessionId, { 
+          sessionService.endSession(sessionId, {
             title: defaultTitle,
             description: 'Session ended automatically when leaving the page'
           }).catch(error => {
@@ -354,19 +378,19 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   // Monitor network status
   useEffect(() => {
     checkNetworkStatus();
-    
+
     const handleOnline = () => {
       setNetworkStatus('online');
       syncPendingUpdates();
     };
-    
+
     const handleOffline = () => {
       setNetworkStatus('offline');
     };
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -409,26 +433,26 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   };
 
   return (
-    <Container size="sm" mt="xl">
-      <Stack align="center" gap="xl">
+    <Container size="sm" style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '30vh' }}>
+      <Stack align="center" gap="xl" w="100%">
         <Title order={1} ta="center">
           Study Timer
         </Title>
-        
+
         {/* Error Alert */}
         {error && (
           <Alert color="red" title="Error" onClose={() => setError(null)} withCloseButton>
             {error}
           </Alert>
         )}
-        
+
         {/* Offline Warning - only show when there's an actual issue */}
         {showOfflineWarning && (
           <Alert color="yellow" title="Connection Issue">
             Unable to save session to server. Your session data is being tracked locally.
           </Alert>
         )}
-        
+
         <Paper p="xl" radius="md" shadow="sm" w="100%" maw={400}>
           <Stack align="center" gap="lg">
             {/* Timer Display */}
@@ -441,12 +465,12 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
             >
               {formatTime(elapsedTime)}
             </Text>
-            
+
             {/* Status Text */}
             <Text size="lg" ta="center" c={getStatusColor()}>
               {getStatusText()}
             </Text>
-            
+
             {/* Control Buttons */}
             <Group justify="center" gap="md">
               {status === 'idle' && (
@@ -461,7 +485,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
                   Start Session
                 </Button>
               )}
-              
+
               {(status === 'active' || status === 'paused') && (
                 <>
                   <Button
@@ -473,7 +497,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
                   >
                     {status === 'active' ? 'Pause' : 'Resume'}
                   </Button>
-                  
+
                   <Button
                     leftSection={<IconPlayerStop size={16} />}
                     size="lg"
@@ -485,7 +509,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
                   </Button>
                 </>
               )}
-              
+
               {status === 'completed' && (
                 <Button
                   leftSection={<IconPlayerPlay size={16} />}
@@ -515,11 +539,11 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
                 You have an active study session running. If you leave this page, your session will be ended automatically.
               </Text>
             </Group>
-            
+
             <Text size="sm" c="dimmed">
               Current session time: {formatTime(elapsedTime)}
             </Text>
-            
+
             <Group justify="flex-end" gap="sm">
               <Button variant="outline" onClick={handleCancelNavigation}>
                 Stay Here

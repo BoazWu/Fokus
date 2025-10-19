@@ -66,8 +66,28 @@ export class SessionsController {
     return this.sessionsService.getSessionById(sessionId, userId);
   }
 
+  @Post(':id/discard')
+  async discardSession(
+    @Param('id') sessionId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.sessionsService.discardSession(sessionId, userId);
+  }
+
   @Post('cleanup/active-sessions')
   async cleanupActiveSessions() {
     return this.sessionsService.deleteAllActiveAndPausedSessions();
+  }
+
+  @Post('clear-active')
+  async clearUserActiveSession(@CurrentUserId() userId: string) {
+    const cleared = this.sessionsService.clearUserActiveSession(userId);
+    return { cleared, message: cleared ? 'Active session cleared' : 'No active session found' };
+  }
+
+  @Post('dev/clear-memory')
+  async clearMemorySessions() {
+    this.sessionsService.clearActiveSessionsFromMemory();
+    return { message: 'In-memory active sessions cleared' };
   }
 }

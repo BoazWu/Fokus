@@ -200,6 +200,32 @@ export class SessionsService {
     return activeSession || null;
   }
 
+  // Discard an active session without saving to database
+  async discardSession(sessionId: string, userId: string): Promise<{ success: boolean }> {
+    const activeSession = this.activeSessions.get(sessionId);
+
+    if (!activeSession || activeSession.userId !== userId) {
+      throw new NotFoundException('Active session not found');
+    }
+
+    // Remove from active sessions without saving to database
+    this.activeSessions.delete(sessionId);
+
+    return { success: true };
+  }
+
+  // Clear active session for a specific user
+  clearUserActiveSession(userId: string): boolean {
+    const activeSession = Array.from(this.activeSessions.entries())
+      .find(([_, session]) => session.userId === userId);
+    
+    if (activeSession) {
+      this.activeSessions.delete(activeSession[0]);
+      return true;
+    }
+    return false;
+  }
+
   // Clear all active sessions from memory (useful for testing or cleanup)
   clearActiveSessionsFromMemory(): void {
     this.activeSessions.clear();
