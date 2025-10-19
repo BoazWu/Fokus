@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Title, Text, Button, Group, Stack, Paper, Alert } from '@mantine/core';
-import { IconPlayerPlay, IconPlayerPause, IconPlayerStop } from '@tabler/icons-react';
+import { Container, Title, Text, Button, Group, Stack, Paper, Alert, Modal } from '@mantine/core';
+import { IconPlayerPlay, IconPlayerPause, IconPlayerStop, IconAlertTriangle } from '@tabler/icons-react';
+import { useBlocker } from 'react-router-dom';
 import { sessionService } from '../../services/sessionService';
 
 interface StudyTimerProps {
@@ -25,11 +26,16 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showOfflineWarning, setShowOfflineWarning] = useState(false);
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false);
   
+
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const pauseStartRef = useRef<number | null>(null);
   const pendingUpdatesRef = useRef<Array<{ sessionId: string; updates: any; timestamp: number }>>([]);
+  const pendingNavigationRef = useRef<(() => void) | null>(null);
+  const statusRef = useRef<TimerStatus>('idle');
+  const sessionIdRef = useRef<string | null>(null);
 
   // Format time for display (HH:MM:SS)
   const formatTime = (milliseconds: number): string => {
@@ -236,6 +242,42 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     }
   };
 
+  // Handle navigation confirmation
+  const handleConfirmNavigation = async () => {
+    setShowNavigationWarning(false);
+    
+    // Directly end the session in the backend when user confirms navigation
+    if (sessionId && !sessionId.startsWith('offline_')) {
+      try {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const defaultTitle = `Study session ended at ${timeString}`;
+        
+        await sessionService.endSession(sessionId, { 
+          title: defaultTitle,
+          description: 'Session ended when navigating to another page'
+        });
+      } catch (error) {
+        console.error('Failed to end session during navigation:', error);
+      }
+    }
+    
+    // Update local state
+    setStatus('completed');
+    stopInterval();
+    
+    // Then proceed with navigation
+    if (pendingNavigationRef.current) {
+      pendingNavigationRef.current();
+      pendingNavigationRef.current = null;
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationWarning(false);
+    pendingNavigationRef.current = null;
+  };
+
   // Reset to start a new session
   const handleReset = () => {
     setStatus('idle');
@@ -247,12 +289,58 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     stopInterval();
   };
 
-  // Cleanup interval on unmount
+  // Block navigation when session is active and show confirmation
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      (status === 'active' || status === 'paused') &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // Handle blocked navigation
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      pendingNavigationRef.current = () => blocker.proceed();
+      setShowNavigationWarning(true);
+    }
+  }, [blocker]);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  // Cleanup interval on unmount and auto-end session
   useEffect(() => {
     return () => {
+      // Auto-end session when component unmounts (user navigates away)
+      // Use refs to get current values without causing effect to re-run
+      if ((statusRef.current === 'active' || statusRef.current === 'paused') && sessionIdRef.current) {
+        // Directly end the session in the backend when unmounting
+        // This ensures paused sessions are marked as completed when user exits
+        const sessionId = sessionIdRef.current;
+        if (!sessionId.startsWith('offline_')) {
+          // Generate a default title for auto-ended sessions
+          const now = new Date();
+          const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const defaultTitle = `Study session ended at ${timeString}`;
+          
+          // Call the API directly without waiting for the response
+          // Note: The backend will handle calculating the final duration correctly
+          sessionService.endSession(sessionId, { 
+            title: defaultTitle,
+            description: 'Session ended automatically when leaving the page'
+          }).catch(error => {
+            console.error('Failed to auto-end session:', error);
+          });
+        }
+      }
       stopInterval();
     };
-  }, []);
+  }, []); // Empty dependency array - only runs on mount/unmount
 
   // Update interval when status changes
   useEffect(() => {
@@ -411,7 +499,37 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
             </Group>
           </Stack>
         </Paper>
-        
+
+        {/* Navigation Warning Modal */}
+        <Modal
+          opened={showNavigationWarning}
+          onClose={handleCancelNavigation}
+          title="End Study Session?"
+          centered
+          size="sm"
+        >
+          <Stack gap="md">
+            <Group gap="sm">
+              <IconAlertTriangle size={20} color="orange" />
+              <Text>
+                You have an active study session running. If you leave this page, your session will be ended automatically.
+              </Text>
+            </Group>
+            
+            <Text size="sm" c="dimmed">
+              Current session time: {formatTime(elapsedTime)}
+            </Text>
+            
+            <Group justify="flex-end" gap="sm">
+              <Button variant="outline" onClick={handleCancelNavigation}>
+                Stay Here
+              </Button>
+              <Button color="orange" onClick={handleConfirmNavigation}>
+                End Session & Leave
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
 
       </Stack>
     </Container>

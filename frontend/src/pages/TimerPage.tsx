@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudyTimer } from '../components/session/StudyTimer';
 import { SessionForm } from '../components/session/SessionForm';
-import { AppHeader } from '../components/layout/AppHeader';
 import { sessionService } from '../services/sessionService';
 import { notifications } from '@mantine/notifications';
 
@@ -115,14 +114,11 @@ export const TimerPage: React.FC = () => {
 
   return (
     <>
-      <AppHeader showStartTimer={false} />
-      <div style={{ paddingTop: '80px' }}>
-        <StudyTimer
-          onSessionStart={handleSessionStart}
-          onSessionEnd={handleSessionEnd}
-          onSessionUpdate={handleSessionUpdate}
-        />
-      </div>
+      <StudyTimer
+        onSessionStart={handleSessionStart}
+        onSessionEnd={handleSessionEnd}
+        onSessionUpdate={handleSessionUpdate}
+      />
       
       <SessionForm
         isOpen={showSessionForm}

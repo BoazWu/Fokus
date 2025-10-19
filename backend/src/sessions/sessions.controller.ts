@@ -6,32 +6,30 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
-import { AuthGuard } from '../common/guards/auth.guard';
+import { Protected, CurrentUserId } from '../common/decorators/auth.decorator';
 import { UpdateSessionDto, EndSessionDto, GetSessionsQueryDto } from './dto/sessions.dto';
 
 @Controller('sessions')
-@UseGuards(AuthGuard)
+@Protected()
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
   @Post('start')
-  async startSession(@Request() req) {
-    return this.sessionsService.createSession(req.user.userId);
+  async startSession(@CurrentUserId() userId: string) {
+    return this.sessionsService.createSession(userId);
   }
 
   @Patch(':id')
   async updateSession(
     @Param('id') sessionId: string,
     @Body() updateSessionDto: UpdateSessionDto,
-    @Request() req,
+    @CurrentUserId() userId: string,
   ) {
     return this.sessionsService.updateSession(
       sessionId,
-      req.user.userId,
+      userId,
       updateSessionDto,
     );
   }
@@ -40,11 +38,11 @@ export class SessionsController {
   async endSession(
     @Param('id') sessionId: string,
     @Body() endSessionDto: EndSessionDto,
-    @Request() req,
+    @CurrentUserId() userId: string,
   ) {
     return this.sessionsService.endSession(
       sessionId,
-      req.user.userId,
+      userId,
       endSessionDto.title,
       endSessionDto.description,
     );
@@ -53,17 +51,17 @@ export class SessionsController {
   @Get()
   async getUserSessions(
     @Query() query: GetSessionsQueryDto,
-    @Request() req,
+    @CurrentUserId() userId: string,
   ) {
     return this.sessionsService.getUserSessions(
-      req.user.userId,
+      userId,
       query.page,
       query.limit,
     );
   }
 
   @Get(':id')
-  async getSession(@Param('id') sessionId: string, @Request() req) {
-    return this.sessionsService.getSessionById(sessionId, req.user.userId);
+  async getSession(@Param('id') sessionId: string, @CurrentUserId() userId: string) {
+    return this.sessionsService.getSessionById(sessionId, userId);
   }
 }

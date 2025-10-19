@@ -11,8 +11,8 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Authentication required');
     }
 
-    // Add user object to request for easy access in controllers
-    (request as any).user = { userId: session.userId };
+    // Add user ID to request for easy access in controllers
+    (request as any).userId = session.userId;
     
     return true;
   }

@@ -143,4 +143,12 @@ export class SessionsService {
 
     return session;
   }
+
+  async deletePausedSessions(): Promise<{ deletedCount: number }> {
+    const result = await this.studySessionModel.deleteMany({
+      status: 'paused'
+    });
+
+    return { deletedCount: result.deletedCount };
+  }
 }

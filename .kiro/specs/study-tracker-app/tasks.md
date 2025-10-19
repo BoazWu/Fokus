@@ -117,8 +117,6 @@
 - [ ] 9. Implement application layout and navigation
   - [ ] 9.1 Create AppShell and Navigation components
     - Build main application layout with Mantine AppShell
-    - Add navigation between timer and dashboard pages
-    - Implement user menu with logout functionality
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
   
   - [ ]* 9.2 Write layout component tests

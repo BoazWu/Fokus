@@ -8,6 +8,8 @@ interface AppHeaderProps {
   showStartTimer?: boolean;
 }
 
+// Legacy AppHeader - replaced by AppLayout with AppShell
+// Keeping for reference, can be removed once AppLayout is confirmed working
 export const AppHeader: React.FC<AppHeaderProps> = ({ showStartTimer = true }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
