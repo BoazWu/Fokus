@@ -3,69 +3,97 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { StudySession, StudySessionDocument } from '../schemas/study-session.schema';
 
+// Interface for active session tracking (in-memory only)
+interface ActiveSession {
+  sessionId: string;
+  userId: string;
+  startTime: Date;
+  pausedDuration: number;
+  status: 'active' | 'paused';
+}
+
 @Injectable()
 export class SessionsService {
+  // In-memory storage for active sessions
+  private activeSessions = new Map<string, ActiveSession>();
+
   constructor(
     @InjectModel(StudySession.name)
     private studySessionModel: Model<StudySessionDocument>,
   ) {}
 
-  async createSession(userId: string): Promise<StudySession> {
-    // Check if user has any active sessions
-    const activeSession = await this.studySessionModel.findOne({
-      userId: new Types.ObjectId(userId),
-      status: { $in: ['active', 'paused'] },
-    });
+  async createSession(userId: string): Promise<{ _id: string; userId: string; title: string; startTime: string; status: 'active'; duration: number; pausedDuration: number; createdAt: string; updatedAt: string }> {
+    // Check if user already has an active session
+    const existingActiveSession = Array.from(this.activeSessions.values())
+      .find(session => session.userId === userId);
 
-    if (activeSession) {
+    if (existingActiveSession) {
       throw new BadRequestException('User already has an active session');
     }
 
-    const session = new this.studySessionModel({
-      userId: new Types.ObjectId(userId),
-      title: `Study Session - ${new Date().toLocaleDateString()}`,
-      startTime: new Date(),
-      status: 'active',
-      duration: 0,
+    // Generate a temporary session ID for tracking
+    const sessionId = new Types.ObjectId().toString();
+    const now = new Date();
+    
+    // Store in memory only
+    this.activeSessions.set(sessionId, {
+      sessionId,
+      userId,
+      startTime: now,
       pausedDuration: 0,
+      status: 'active',
     });
 
-    return session.save();
+    // Return session data in the expected format (but don't save to DB yet)
+    return {
+      _id: sessionId,
+      userId,
+      title: `Study Session - ${now.toLocaleDateString()}`,
+      startTime: now.toISOString(),
+      status: 'active' as const,
+      duration: 0,
+      pausedDuration: 0,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
   }
 
   async updateSession(
     sessionId: string,
     userId: string,
-    updates: Partial<StudySession>,
-  ): Promise<StudySession> {
-    const session = await this.studySessionModel.findOne({
-      _id: new Types.ObjectId(sessionId),
-      userId: new Types.ObjectId(userId),
-    });
+    updates: { status?: 'active' | 'paused'; pausedDuration?: number },
+  ): Promise<{ _id: string; userId: string; title: string; startTime: string; duration: number; status: 'active' | 'paused'; pausedDuration: number; createdAt: string; updatedAt: string }> {
+    const activeSession = this.activeSessions.get(sessionId);
 
-    if (!session) {
-      throw new NotFoundException('Session not found');
+    if (!activeSession || activeSession.userId !== userId) {
+      throw new NotFoundException('Active session not found');
     }
 
-    // Prevent updating completed sessions
-    if (session.status === 'completed') {
-      throw new BadRequestException('Cannot update completed session');
-    }
-
-    // Handle status transitions
+    // Update the in-memory session
     if (updates.status) {
-      if (updates.status === 'paused' && session.status === 'active') {
-        // Calculate current duration when pausing
-        const currentTime = new Date();
-        const sessionDuration = currentTime.getTime() - session.startTime.getTime() - session.pausedDuration;
-        updates.duration = sessionDuration;
-      } else if (updates.status === 'active' && session.status === 'paused') {
-        // When resuming, we don't need to update duration here as it will be calculated on next pause/end
-      }
+      activeSession.status = updates.status;
+    }
+    
+    if (updates.pausedDuration !== undefined) {
+      activeSession.pausedDuration = updates.pausedDuration;
     }
 
-    Object.assign(session, updates);
-    return session.save();
+    // Calculate current duration
+    const currentTime = new Date();
+    const duration = currentTime.getTime() - activeSession.startTime.getTime() - activeSession.pausedDuration;
+
+    // Return updated session data
+    return {
+      _id: sessionId,
+      userId: activeSession.userId,
+      title: `Study Session - ${activeSession.startTime.toLocaleDateString()}`,
+      startTime: activeSession.startTime.toISOString(),
+      duration,
+      status: activeSession.status,
+      pausedDuration: activeSession.pausedDuration,
+      createdAt: activeSession.startTime.toISOString(),
+      updatedAt: currentTime.toISOString(),
+    };
   }
 
   async endSession(
@@ -73,36 +101,38 @@ export class SessionsService {
     userId: string,
     title?: string,
     description?: string,
+    rating?: number,
   ): Promise<StudySession> {
-    const session = await this.studySessionModel.findOne({
-      _id: new Types.ObjectId(sessionId),
-      userId: new Types.ObjectId(userId),
-    });
+    const activeSession = this.activeSessions.get(sessionId);
 
-    if (!session) {
-      throw new NotFoundException('Session not found');
-    }
-
-    if (session.status === 'completed') {
-      throw new BadRequestException('Session is already completed');
+    if (!activeSession || activeSession.userId !== userId) {
+      throw new NotFoundException('Active session not found');
     }
 
     const endTime = new Date();
-    const totalDuration = endTime.getTime() - session.startTime.getTime() - session.pausedDuration;
+    const totalDuration = endTime.getTime() - activeSession.startTime.getTime() - activeSession.pausedDuration;
 
-    session.endTime = endTime;
-    session.duration = totalDuration;
-    session.status = 'completed';
-    
-    if (title) {
-      session.title = title;
-    }
-    
-    if (description) {
-      session.description = description;
+    // Validate rating if provided
+    if (rating !== undefined && (rating < 1 || rating > 5)) {
+      throw new BadRequestException('Rating must be between 1 and 5 stars');
     }
 
-    return session.save();
+    // Now save to database as a completed session
+    const completedSession = new this.studySessionModel({
+      userId: new Types.ObjectId(userId),
+      title: title || `Study Session - ${activeSession.startTime.toLocaleDateString()}`,
+      description,
+      startTime: activeSession.startTime,
+      endTime,
+      duration: totalDuration,
+      pausedDuration: activeSession.pausedDuration,
+      rating,
+    });
+
+    // Remove from active sessions
+    this.activeSessions.delete(sessionId);
+
+    return completedSession.save();
   }
 
   async getUserSessions(
@@ -112,14 +142,19 @@ export class SessionsService {
   ): Promise<{ sessions: StudySession[]; total: number; totalPages: number }> {
     const skip = (page - 1) * limit;
 
+    // All sessions in the database are completed, so no need to filter by status
+    const filter = { 
+      userId: new Types.ObjectId(userId)
+    };
+
     const [sessions, total] = await Promise.all([
       this.studySessionModel
-        .find({ userId: new Types.ObjectId(userId) })
+        .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.studySessionModel.countDocuments({ userId: new Types.ObjectId(userId) }),
+      this.studySessionModel.countDocuments(filter),
     ]);
 
     const totalPages = Math.ceil(total / limit);
@@ -144,11 +179,29 @@ export class SessionsService {
     return session;
   }
 
-  async deletePausedSessions(): Promise<{ deletedCount: number }> {
+  // Clean up method to delete all existing active/paused sessions from database
+  async deleteAllActiveAndPausedSessions(): Promise<{ deletedCount: number }> {
     const result = await this.studySessionModel.deleteMany({
-      status: 'paused'
+      $or: [
+        { status: 'active' },
+        { status: 'paused' },
+        { endTime: { $exists: false } }, // Sessions without endTime (incomplete)
+      ]
     });
 
     return { deletedCount: result.deletedCount };
+  }
+
+  // Get active session for a user (from memory)
+  getActiveSession(userId: string): ActiveSession | null {
+    const activeSession = Array.from(this.activeSessions.values())
+      .find(session => session.userId === userId);
+    
+    return activeSession || null;
+  }
+
+  // Clear all active sessions from memory (useful for testing or cleanup)
+  clearActiveSessionsFromMemory(): void {
+    this.activeSessions.clear();
   }
 }

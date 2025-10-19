@@ -54,7 +54,7 @@ export const TimerPage: React.FC = () => {
     }
   };
 
-  const handleSessionFormSubmit = async (title?: string, description?: string) => {
+  const handleSessionFormSubmit = async (title?: string, description?: string, rating?: number) => {
     if (!completedSessionId) return;
 
     // Generate default title if none provided
@@ -80,10 +80,11 @@ export const TimerPage: React.FC = () => {
           });
         }
       } else {
-        // Online session - update with title and description
+        // Online session - update with title, description, and rating
         await sessionService.endSession(completedSessionId, { 
           title: finalTitle, 
-          description: description || undefined 
+          description: description || undefined,
+          rating: rating || undefined
         });
         notifications.show({
           title: 'Session Saved',

@@ -5,7 +5,7 @@ export interface CreateSessionResponse {
   userId: string;
   title: string;
   startTime: string;
-  status: 'active' | 'paused' | 'completed';
+  status: 'active';
   duration: number;
   pausedDuration: number;
   createdAt: string;
@@ -20,6 +20,7 @@ export interface UpdateSessionRequest {
 export interface EndSessionRequest {
   title?: string;
   description?: string;
+  rating?: number;
 }
 
 class SessionService {
@@ -93,6 +94,18 @@ class SessionService {
   async getSession(sessionId: string): Promise<StudySession> {
     const response = await fetch(`${this.baseUrl}/${sessionId}`, {
       credentials: 'include',
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async cleanupActiveSessions(): Promise<{ deletedCount: number }> {
+    const response = await fetch(`${this.baseUrl}/cleanup/active-sessions`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     return this.handleResponse(response);

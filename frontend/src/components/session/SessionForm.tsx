@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Modal, TextInput, Textarea, Button, Group, Stack } from '@mantine/core';
+import { Modal, TextInput, Textarea, Button, Group, Stack, Text } from '@mantine/core';
+import { StarRating } from '../common/StarRating';
 
 interface SessionFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (title?: string, description?: string) => void;
+  onSubmit: (title?: string, description?: string, rating?: number) => void;
   sessionDuration: number;
 }
 
@@ -16,6 +17,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [rating, setRating] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formatDuration = (milliseconds: number): string => {
@@ -38,9 +40,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     setIsSubmitting(true);
     
     try {
-      await onSubmit(title.trim() || undefined, description.trim() || undefined);
+      await onSubmit(
+        title.trim() || undefined, 
+        description.trim() || undefined,
+        rating > 0 ? rating : undefined
+      );
       setTitle('');
       setDescription('');
+      setRating(0);
       onClose();
     } catch (error) {
       console.error('Failed to save session:', error);
@@ -53,6 +60,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     onSubmit();
     setTitle('');
     setDescription('');
+    setRating(0);
     onClose();
   };
 
@@ -85,6 +93,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             minRows={3}
           />
+
+          <div>
+            <Text size="sm" fw={500} mb="xs" ta="center">
+              Rate your session (optional)
+            </Text>
+            <Group justify="center">
+              <StarRating
+                value={rating}
+                onChange={setRating}
+                size={24}
+              />
+            </Group>
+          </div>
           
           <Group justify="space-between" mt="md">
             <Button

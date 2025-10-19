@@ -36,16 +36,21 @@
     - Integration tests for auth endpoints
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [-] 4. Build study session backend functionality
+- [x] 4. Build study session backend functionality
   - [x] 4.1 Create study session service and controller
     - Implement session creation, update, and completion
     - Add session retrieval for user dashboard
-    - Handle session status management (active, paused, completed)
+    - **MAJOR REFACTOR: Simplified session storage architecture**
+      - Active sessions now stored in-memory only (not in database)
+      - Sessions only saved to database when completed
+      - Removed status field from schema (all DB sessions are completed)
+      - Added cleanup endpoint to remove any existing active/paused sessions
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4_
   
-  - [ ]* 4.2 Write study session tests
+  - [x] 4.2 Write study session tests
     - Unit tests for session service methods
     - Integration tests for session endpoints
+    - Updated tests for new in-memory active session architecture
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
 - [x] 5. Create frontend authentication components

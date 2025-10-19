@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Text, Group, Badge, Stack } from '@mantine/core';
 import { IconClock, IconCalendar } from '@tabler/icons-react';
+import { StarRating } from '../common/StarRating';
 import type { StudySession } from '../../types';
 
 interface SessionCardProps {
@@ -34,30 +35,19 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
     });
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'completed':
-        return 'green';
-      case 'active':
-        return 'blue';
-      case 'paused':
-        return 'yellow';
-      default:
-        return 'gray';
-    }
-  };
+
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Stack gap="sm">
-        {/* Header with title and status */}
+        {/* Header with title and rating */}
         <Group justify="space-between" align="flex-start">
           <Text fw={500} size="lg" style={{ flex: 1 }}>
             {session.title}
           </Text>
-          <Badge color={getStatusColor(session.status)} variant="light">
-            {session.status}
-          </Badge>
+          {session.rating && (
+            <StarRating value={session.rating} readonly size={16} />
+          )}
         </Group>
 
         {/* Description if available */}

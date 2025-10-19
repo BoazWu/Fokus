@@ -19,21 +19,17 @@ export class StudySession {
   @Prop({ required: true })
   startTime: Date;
 
-  @Prop()
-  endTime?: Date;
+  @Prop({ required: true })
+  endTime: Date;
 
-  @Prop({ required: true, default: 0 })
+  @Prop({ required: true })
   duration: number; // in milliseconds
-
-  @Prop({ 
-    required: true, 
-    enum: ['active', 'paused', 'completed'], 
-    default: 'active' 
-  })
-  status: string;
 
   @Prop({ required: true, default: 0 })
   pausedDuration: number; // total time paused in milliseconds
+
+  @Prop({ min: 1, max: 5 })
+  rating?: number; // optional rating out of 5 stars
 }
 
 export const StudySessionSchema = SchemaFactory.createForClass(StudySession);

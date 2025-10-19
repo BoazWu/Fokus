@@ -24,10 +24,23 @@ export interface StudySession {
   title: string;
   description?: string;
   startTime: string;
-  endTime?: string;
+  endTime: string; // All sessions in DB are completed, so endTime is required
   duration: number; // in milliseconds
-  status: 'active' | 'paused' | 'completed';
   pausedDuration: number; // total time paused
+  rating?: number; // optional rating out of 5 stars
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Active session type for timer (not stored in DB)
+export interface ActiveSession {
+  _id: string;
+  userId: string;
+  title: string;
+  startTime: string;
+  duration: number;
+  status: 'active' | 'paused';
+  pausedDuration: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,4 +56,5 @@ export interface ApiResponse<T = any> {
 export interface SessionFormData {
   title?: string;
   description?: string;
+  rating?: number;
 }

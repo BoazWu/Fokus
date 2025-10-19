@@ -45,6 +45,7 @@ export class SessionsController {
       userId,
       endSessionDto.title,
       endSessionDto.description,
+      endSessionDto.rating,
     );
   }
 
@@ -63,5 +64,10 @@ export class SessionsController {
   @Get(':id')
   async getSession(@Param('id') sessionId: string, @CurrentUserId() userId: string) {
     return this.sessionsService.getSessionById(sessionId, userId);
+  }
+
+  @Post('cleanup/active-sessions')
+  async cleanupActiveSessions() {
+    return this.sessionsService.deleteAllActiveAndPausedSessions();
   }
 }

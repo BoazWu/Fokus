@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsNumber, Min, Max } from 'class-validator';
 
 export class UpdateSessionDto {
   @IsOptional()
@@ -18,6 +18,12 @@ export class EndSessionDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating?: number;
 }
 
 export class GetSessionsQueryDto {
