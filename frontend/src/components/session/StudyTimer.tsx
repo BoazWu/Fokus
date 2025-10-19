@@ -496,7 +496,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     <Container size="sm" style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '30vh' }}>
       <Stack align="center" gap="xl" w="100%">
         <Title order={1} ta="center">
-          Study Timer
+          Study Stopwatch
         </Title>
 
         {/* Error Alert */}

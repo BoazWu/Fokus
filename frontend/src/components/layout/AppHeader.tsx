@@ -69,7 +69,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ showStartTimer = true }) =
               }}
               title="Go to Dashboard"
             >
-              StudyTracker
+              Fokus
             </Text>
           </Group>
 

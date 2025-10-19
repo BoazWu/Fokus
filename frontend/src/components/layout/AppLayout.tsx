@@ -72,7 +72,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               }}
               title="Go to Dashboard"
             >
-              StudyTracker
+              Fokus
             </Text>
           </Group>
 
@@ -133,7 +133,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           mt="xs"
           onClick={handleStartTimer}
         >
-          Study Timer
+          Study Stopwatch
         </Button>
         
         <Button
