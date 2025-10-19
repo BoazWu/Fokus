@@ -94,7 +94,10 @@ export class ChatService {
     // Calculate study statistics
     const totalSessions = recentSessions.length;
     const totalStudyTime = recentSessions.reduce((sum, session) => sum + session.duration, 0);
+    const totalPausedTime = recentSessions.reduce((sum, session) => sum + session.pausedDuration, 0);
+    const totalFocusedTime = totalStudyTime - totalPausedTime;
     const averageSessionLength = totalSessions > 0 ? totalStudyTime / totalSessions : 0;
+    const averagePausedTime = totalSessions > 0 ? totalPausedTime / totalSessions : 0;
 
     const ratingsWithValues = recentSessions.filter(s => s.rating && s.rating > 0);
     const averageRating = ratingsWithValues.length > 0
@@ -107,12 +110,17 @@ export class ChatService {
     return {
       totalSessions,
       totalStudyTimeHours: Math.round(totalStudyTime / (1000 * 60 * 60) * 100) / 100,
+      totalFocusedTimeHours: Math.round(totalFocusedTime / (1000 * 60 * 60) * 100) / 100,
+      totalPausedTimeHours: Math.round(totalPausedTime / (1000 * 60 * 60) * 100) / 100,
       averageSessionLengthMinutes: Math.round(averageSessionLength / (1000 * 60)),
+      averagePausedTimeMinutes: Math.round(averagePausedTime / (1000 * 60)),
       averageRating,
       studyPatterns,
       recentSessions: recentSessions.slice(0, 10).map(session => ({
         title: session.title,
         duration: Math.round(session.duration / (1000 * 60)), // in minutes
+        pausedDuration: Math.round(session.pausedDuration / (1000 * 60)), // in minutes
+        focusedDuration: Math.round((session.duration - session.pausedDuration) / (1000 * 60)), // in minutes
         rating: session.rating,
         date: session.startTime,
       })),
@@ -146,7 +154,10 @@ export class ChatService {
 User's Study Statistics (Last 30 days):
 - Total study sessions: ${studyContext.totalSessions}
 - Total study time: ${studyContext.totalStudyTimeHours} hours
+- Total focused time: ${studyContext.totalFocusedTimeHours} hours
+- Total paused time: ${studyContext.totalPausedTimeHours} hours
 - Average session length: ${studyContext.averageSessionLengthMinutes} minutes
+- Average paused time per session: ${studyContext.averagePausedTimeMinutes} minutes
 - Average session rating: ${studyContext.averageRating ? studyContext.averageRating.toFixed(1) + '/5' : 'No ratings yet'}
 - Most active study day: ${studyContext.studyPatterns.mostActiveDay}
 - Most active study hour: ${studyContext.studyPatterns.mostActiveHour}:00
@@ -154,7 +165,7 @@ User's Study Statistics (Last 30 days):
 
 Recent Sessions:
 ${studyContext.recentSessions.map((session: any, index: number) =>
-      `${index + 1}. "${session.title}" - ${session.duration} min${session.rating ? ` (${session.rating}/5 stars)` : ''}`
+      `${index + 1}. "${session.title}" - ${session.duration} min total (${session.focusedDuration} min focused${session.pausedDuration > 0 ? `, ${session.pausedDuration} min paused` : ''})${session.rating ? ` (${session.rating}/5 stars)` : ''}`
     ).join('\n')}
 
 Guidelines for responses:

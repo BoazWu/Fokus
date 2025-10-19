@@ -6,7 +6,7 @@ import { sessionService } from '../../services/sessionService';
 
 interface StudyTimerProps {
   onSessionStart?: (sessionId: string) => void;
-  onSessionEnd?: (sessionId: string, duration: number) => void;
+  onSessionEnd?: (sessionId: string, duration: number, pausedDuration: number) => void;
   onSessionUpdate?: (sessionId: string, duration: number, status: 'active' | 'paused') => void;
 }
 
@@ -22,6 +22,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0); // in milliseconds
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pausedDuration, setPausedDuration] = useState(0); // total time paused
+  const [currentPauseDuration, setCurrentPauseDuration] = useState(0); // current pause session duration
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('online');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,24 +107,29 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     }
 
     intervalRef.current = setInterval(() => {
-      if (startTimeRef.current && status === 'active') {
+      if (startTimeRef.current && statusRef.current === 'active') {
         const now = Date.now();
         const newElapsedTime = now - startTimeRef.current - pausedDuration;
         setElapsedTime(newElapsedTime);
 
         // Update session every 30 seconds when active and online (silently)
-        if (sessionId && newElapsedTime % 30000 < 1000) {
-          if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
-            handleApiCall(() => sessionService.updateSession(sessionId, {
+        if (sessionIdRef.current && newElapsedTime % 30000 < 1000) {
+          if (networkStatus === 'online' && !sessionIdRef.current.startsWith('offline_')) {
+            handleApiCall(() => sessionService.updateSession(sessionIdRef.current!, {
               status: 'active',
               pausedDuration
             }), null, false); // Don't show offline alerts for periodic updates
           }
 
           if (onSessionUpdate) {
-            onSessionUpdate(sessionId, newElapsedTime, 'active');
+            onSessionUpdate(sessionIdRef.current, newElapsedTime, 'active');
           }
         }
+      } else if (statusRef.current === 'paused' && pauseStartRef.current) {
+        // Update current pause duration while paused
+        const now = Date.now();
+        const currentPause = now - pauseStartRef.current;
+        setCurrentPauseDuration(currentPause);
       }
     }, 1000);
   };
@@ -146,6 +152,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     const now = Date.now();
     startTimeRef.current = now;
     setPausedDuration(0);
+    setCurrentPauseDuration(0);
     setElapsedTime(0);
     setStatus('active');
 
@@ -200,6 +207,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
 
     if (status === 'active') {
       pauseStartRef.current = Date.now();
+      setCurrentPauseDuration(0); // Reset current pause timer
       setStatus('paused');
       stopInterval();
 
@@ -221,15 +229,18 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
       }
     } else if (status === 'paused') {
       // Resume from pause
+      let newPausedDuration = pausedDuration;
       if (pauseStartRef.current) {
         const pauseDuration = Date.now() - pauseStartRef.current;
-        setPausedDuration(prev => prev + pauseDuration);
+        newPausedDuration = pausedDuration + pauseDuration;
+        setPausedDuration(newPausedDuration);
         pauseStartRef.current = null;
       }
+      setCurrentPauseDuration(0); // Reset current pause timer
       setStatus('active');
 
-      // Update backend (silently)
-      const updates = { status: 'active' as const, pausedDuration };
+      // Update backend (silently) - use the NEW pausedDuration
+      const updates = { status: 'active' as const, pausedDuration: newPausedDuration };
       if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
         await handleApiCall(() => sessionService.updateSession(sessionId, updates), null, false);
       } else if (sessionId.startsWith('offline_')) {
@@ -251,24 +262,65 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   const handleEnd = async () => {
     if (!sessionId) return;
 
+    // Calculate final elapsed time at the exact moment of ending
+    const endTime = Date.now();
+    let finalPausedDuration = pausedDuration;
+    
     if (status === 'paused' && pauseStartRef.current) {
       // If ending while paused, add the final pause duration
-      const pauseDuration = Date.now() - pauseStartRef.current;
-      setPausedDuration(prev => prev + pauseDuration);
+      const pauseDuration = endTime - pauseStartRef.current;
+      finalPausedDuration = pausedDuration + pauseDuration;
+      setPausedDuration(finalPausedDuration);
+      
+      // Update backend with final paused duration before ending
+      if (networkStatus === 'online' && !sessionId.startsWith('offline_')) {
+        try {
+          await sessionService.updateSession(sessionId, {
+            status: 'paused',
+            pausedDuration: finalPausedDuration
+          });
+        } catch (error) {
+          console.error('Failed to update final paused duration:', error);
+        }
+      }
     }
+
+    // Calculate the final elapsed time (focused time) at the moment of ending
+    const finalElapsedTime = startTimeRef.current 
+      ? endTime - startTimeRef.current - finalPausedDuration 
+      : elapsedTime;
 
     setStatus('completed');
     stopInterval();
 
-    // Trigger the session end callback - TimerPage will handle showing the form
+    // Trigger the session end callback with the final calculated time
     if (onSessionEnd) {
-      onSessionEnd(sessionId, elapsedTime);
+      onSessionEnd(sessionId, finalElapsedTime, finalPausedDuration);
     }
   };
 
   // Handle navigation confirmation
   const handleConfirmNavigation = async () => {
     setShowNavigationWarning(false);
+
+    // Calculate final paused duration if currently paused
+    let finalPausedDuration = pausedDuration;
+    if (status === 'paused' && pauseStartRef.current) {
+      const pauseDuration = Date.now() - pauseStartRef.current;
+      finalPausedDuration = pausedDuration + pauseDuration;
+      
+      // Update backend with final paused duration first
+      if (sessionId && !sessionId.startsWith('offline_')) {
+        try {
+          await sessionService.updateSession(sessionId, {
+            status: 'paused',
+            pausedDuration: finalPausedDuration
+          });
+        } catch (error) {
+          console.error('Failed to update final paused duration during navigation:', error);
+        }
+      }
+    }
 
     // Directly end the session in the backend when user confirms navigation
     if (sessionId && !sessionId.startsWith('offline_')) {
@@ -307,6 +359,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     setStatus('idle');
     setElapsedTime(0);
     setPausedDuration(0);
+    setCurrentPauseDuration(0);
     setSessionId(null);
     startTimeRef.current = null;
     pauseStartRef.current = null;
@@ -368,7 +421,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
 
   // Update interval when status changes
   useEffect(() => {
-    if (status === 'active') {
+    if (status === 'active' || status === 'paused') {
       startInterval();
     } else {
       stopInterval();
@@ -404,6 +457,13 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     }
   }, [networkStatus]);
 
+  const formatPauseDuration = (milliseconds: number): string => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const getStatusText = () => {
     switch (status) {
       case 'idle':
@@ -411,7 +471,7 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
       case 'active':
         return 'Study session in progress';
       case 'paused':
-        return 'Study session paused';
+        return `Study session paused (${formatPauseDuration(currentPauseDuration)})`;
       case 'completed':
         return 'Study session completed!';
       default:

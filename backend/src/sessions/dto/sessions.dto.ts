@@ -24,6 +24,16 @@ export class EndSessionDto {
   @Min(1)
   @Max(5)
   rating?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  focusedDuration?: number; // Duration shown on timer (focused time)
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pausedDuration?: number; // Total time paused
 }
 
 export class GetSessionsQueryDto {

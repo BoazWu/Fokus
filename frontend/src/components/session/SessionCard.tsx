@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Text, Group, Badge, Stack } from '@mantine/core';
-import { IconClock, IconCalendar } from '@tabler/icons-react';
+import { IconClock, IconCalendar, IconPlayerPause } from '@tabler/icons-react';
 import { StarRating } from '../common/StarRating';
 import type { StudySession } from '../../types';
 
@@ -58,11 +58,25 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
         )}
 
         {/* Duration and date info */}
-        <Group gap="lg">
+        <Group gap="lg" wrap="wrap">
           <Group gap="xs">
             <IconClock size={16} color="var(--mantine-color-dimmed)" />
             <Text size="sm" c="dimmed">
-              {formatDuration(session.duration)}
+              {formatDuration(session.duration)} total
+            </Text>
+          </Group>
+          
+          <Group gap="xs">
+            <IconClock size={16} color="var(--mantine-color-green-6)" />
+            <Text size="sm" c="green" fw={500}>
+              {formatDuration(session.duration - (session.pausedDuration || 0))} focused
+            </Text>
+          </Group>
+          
+          <Group gap="xs">
+            <IconPlayerPause size={16} color="var(--mantine-color-orange-6)" />
+            <Text size="sm" c="orange">
+              {formatDuration(session.pausedDuration || 0)} paused
             </Text>
           </Group>
           

@@ -21,6 +21,8 @@ export interface EndSessionRequest {
   title?: string;
   description?: string;
   rating?: number;
+  focusedDuration?: number; // Duration shown on timer (focused time)
+  pausedDuration?: number; // Total time paused
 }
 
 class SessionService {

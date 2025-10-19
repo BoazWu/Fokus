@@ -102,6 +102,8 @@ export class SessionsService {
     title?: string,
     description?: string,
     rating?: number,
+    providedDuration?: number,
+    providedPausedDuration?: number,
   ): Promise<StudySession> {
     const activeSession = this.activeSessions.get(sessionId);
 
@@ -110,7 +112,20 @@ export class SessionsService {
     }
 
     const endTime = new Date();
-    const totalDuration = endTime.getTime() - activeSession.startTime.getTime() - activeSession.pausedDuration;
+    
+    // Use provided durations if available, otherwise calculate from timestamps
+    let finalPausedDuration: number;
+    let finalTotalDuration: number;
+    
+    if (providedDuration !== undefined && providedPausedDuration !== undefined) {
+      // Use the pre-calculated values from frontend (when "End Session" was pressed)
+      finalTotalDuration = providedDuration + providedPausedDuration;
+      finalPausedDuration = providedPausedDuration;
+    } else {
+      // Fall back to calculating from timestamps (for backward compatibility)
+      finalTotalDuration = endTime.getTime() - activeSession.startTime.getTime();
+      finalPausedDuration = activeSession.pausedDuration;
+    }
 
     // Validate rating if provided
     if (rating !== undefined && (rating < 1 || rating > 5)) {
@@ -124,8 +139,8 @@ export class SessionsService {
       description,
       startTime: activeSession.startTime,
       endTime,
-      duration: totalDuration,
-      pausedDuration: activeSession.pausedDuration,
+      duration: finalTotalDuration, // Total duration (focused + paused)
+      pausedDuration: finalPausedDuration,
       rating,
     });
 

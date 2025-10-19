@@ -46,6 +46,8 @@ export class SessionsController {
       endSessionDto.title,
       endSessionDto.description,
       endSessionDto.rating,
+      endSessionDto.focusedDuration,
+      endSessionDto.pausedDuration,
     );
   }
 

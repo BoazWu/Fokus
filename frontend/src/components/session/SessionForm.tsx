@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, TextInput, Textarea, Button, Group, Stack, Text } from '@mantine/core';
+import { Modal, TextInput, Textarea, Button, Group, Stack, Text, Paper } from '@mantine/core';
 import { StarRating } from '../common/StarRating';
 
 interface SessionFormProps {
@@ -8,6 +8,7 @@ interface SessionFormProps {
   onSubmit: (title?: string, description?: string, rating?: number) => void;
   onDiscard: () => void;
   sessionDuration: number;
+  pausedDuration?: number;
 }
 
 export const SessionForm: React.FC<SessionFormProps> = ({
@@ -16,6 +17,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   onSubmit,
   onDiscard,
   sessionDuration,
+  pausedDuration = 0,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -77,9 +79,38 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
-          <div>
-            <strong>Session Duration:</strong> {formatDuration(sessionDuration)}
-          </div>
+          {/* Session Summary */}
+          <Paper p="md" withBorder radius="md" style={{ backgroundColor: '#f8f9fa' }}>
+            <Stack gap="xs">
+              <Text size="sm" fw={500} ta="center" c="dimmed">
+                Session Summary
+              </Text>
+              
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">Total Duration:</Text>
+                <Text size="sm" fw={500}>{formatDuration(sessionDuration + pausedDuration)}</Text>
+              </Group>
+              
+              <Group justify="space-between">
+                <Text size="sm" c="green">Time Focused:</Text>
+                <Text size="sm" fw={500} c="green">{formatDuration(sessionDuration)}</Text>
+              </Group>
+              
+              <Group justify="space-between">
+                <Text size="sm" c="orange">Time Paused:</Text>
+                <Text size="sm" fw={500} c="orange">{formatDuration(pausedDuration)}</Text>
+              </Group>
+              
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">Focus Efficiency:</Text>
+                <Text size="sm" fw={500}>
+                  {sessionDuration + pausedDuration > 0 
+                    ? Math.round((sessionDuration / (sessionDuration + pausedDuration)) * 100)
+                    : 100}%
+                </Text>
+              </Group>
+            </Stack>
+          </Paper>
           
           <TextInput
             label="Session Title (optional)"

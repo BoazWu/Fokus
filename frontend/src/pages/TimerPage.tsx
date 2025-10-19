@@ -9,6 +9,7 @@ export const TimerPage: React.FC = () => {
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
   const [completedSessionDuration, setCompletedSessionDuration] = useState(0);
+  const [completedSessionPausedDuration, setCompletedSessionPausedDuration] = useState(0);
   const navigate = useNavigate();
 
   const handleSessionStart = (sessionId: string) => {
@@ -20,10 +21,11 @@ export const TimerPage: React.FC = () => {
     });
   };
 
-  const handleSessionEnd = (sessionId: string, duration: number) => {
-    console.log('Session ended:', sessionId, 'Duration:', duration);
+  const handleSessionEnd = (sessionId: string, duration: number, pausedDuration: number) => {
+    console.log('Session ended:', sessionId, 'Duration:', duration, 'Paused:', pausedDuration);
     setCompletedSessionId(sessionId);
     setCompletedSessionDuration(duration);
+    setCompletedSessionPausedDuration(pausedDuration);
     setShowSessionForm(true);
   };
 
@@ -84,7 +86,9 @@ export const TimerPage: React.FC = () => {
         await sessionService.endSession(completedSessionId, { 
           title: finalTitle, 
           description: description || undefined,
-          rating: rating || undefined
+          rating: rating || undefined,
+          focusedDuration: completedSessionDuration,
+          pausedDuration: completedSessionPausedDuration
         });
         notifications.show({
           title: 'Session Saved',
@@ -140,6 +144,7 @@ export const TimerPage: React.FC = () => {
     setShowSessionForm(false);
     setCompletedSessionId(null);
     setCompletedSessionDuration(0);
+    setCompletedSessionPausedDuration(0);
   };
 
   return (
@@ -156,6 +161,7 @@ export const TimerPage: React.FC = () => {
         onSubmit={handleSessionFormSubmit}
         onDiscard={handleSessionDiscard}
         sessionDuration={completedSessionDuration}
+        pausedDuration={completedSessionPausedDuration}
       />
     </>
   );
