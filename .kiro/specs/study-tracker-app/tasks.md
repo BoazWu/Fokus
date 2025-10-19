@@ -96,15 +96,15 @@
     - Test default title generation
     - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 8. Build user dashboard and session history
-  - [ ] 8.1 Create Dashboard and SessionsList components
+- [x] 8. Build user dashboard and session history
+  - [x] 8.1 Create Dashboard and SessionsList components
     - Build main "You" page layout
     - Implement SessionCard component for individual sessions
     - Add session list with chronological ordering
     - Handle empty state when no sessions exist
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
   
-  - [ ] 8.2 Add pagination for session history
+  - [x] 8.2 Add pagination for session history
     - Implement pagination for large session lists
     - Add loading states and error handling
     - _Requirements: 4.5_

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Container, Title, Text } from '@mantine/core';
+import { Container, Title, Stack } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { AppHeader } from '../components/layout/AppHeader';
+import { SessionsList } from '../components/session/SessionsList';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -11,12 +12,13 @@ export const DashboardPage: React.FC = () => {
       <AppHeader showStartTimer={true} />
       <div style={{ paddingTop: '80px' }}>
         <Container size="lg" mt="xl">
-          <Title order={1} mb="md">
-            Welcome, {user?.email}
-          </Title>
-          <Text>
-            This is your dashboard. Session tracking components will be implemented in later tasks.
-          </Text>
+          <Stack gap="xl">
+            <Title order={1}>
+              Welcome back, {user?.email?.split('@')[0]}!
+            </Title>
+            
+            <SessionsList />
+          </Stack>
         </Container>
       </div>
     </>
